@@ -1,0 +1,20 @@
+langchain-core>=0.1.0
+langgraph>=0.0.10
+python-dotenv>=1.0.0
+colorama>=0.4.6
+questionary>=2.0.0
+python-dateutil>=2.8.2
+tabulate>=0.9.0
+matplotlib>=3.7.0  # For visualization functions
+numpy>=1.24.0  # Common dependency
+pandas>=2.0.0  # Likely needed for data handling
+langchain>=0.1.0  # Main LangChain package
+langchain-openai>=0.0.1  # For OpenAI models
+langchain-anthropic>=0.0.1  # For Anthropic models
+langchain-google-genai>=0.0.1  # For Google models
+python-dotenv>=1.0.0  # For loading environment variables
+openai
+jsonpointer==2.3
+jsonschema==4.17.3
+tiktoken==0.3.1
+python-dateutil 
