@@ -1,20 +1,24 @@
-langchain-core>=0.1.0
-langgraph>=0.0.10
-python-dotenv>=1.0.0
+# Main dependencies
+langchain
+langchain-anthropic==0.3.5
+langchain-groq==0.2.3
+langchain-openai>=0.3.5
+langchain-deepseek>=0.1.2
+langgraph==0.2.56
+pandas>=2.1.0
+numpy>=1.24.0
+python-dotenv
+matplotlib>=3.9.2
 colorama>=0.4.6
-questionary>=2.0.0
-python-dateutil>=2.8.2
-tabulate>=0.9.0
-matplotlib>=3.7.0  # For visualization functions
-numpy>=1.24.0  # Common dependency
-pandas>=2.0.0  # Likely needed for data handling
-langchain>=0.1.0  # Main LangChain package
-langchain-openai>=0.0.1  # For OpenAI models
-langchain-anthropic>=0.0.1  # For Anthropic models
-langchain-google-genai>=0.0.1  # For Google models
-python-dotenv>=1.0.0  # For loading environment variables
-openai
-jsonpointer==2.3
-jsonschema==4.17.3
-tiktoken==0.3.1
-python-dateutil 
+questionary>=2.1.0
+rich==13.7.0
+langchain-google-genai>=2.0.11
+packaging>=24.0
+protobuf
+grpcio-status
+
+# Development dependencies
+pytest>=7.4.0
+black>=24.3.0
+isort>=5.12.0
+flake8>=6.1.0
