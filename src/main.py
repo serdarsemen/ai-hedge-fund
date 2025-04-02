@@ -3,18 +3,18 @@ import sys
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, StateGraph
-from colorama import Fore, Back, Style, init
+from colorama import Fore, Style, init  # , Back
 import questionary
-from agents.ben_graham import ben_graham_agent
-from agents.bill_ackman import bill_ackman_agent
-from agents.fundamentals import fundamentals_agent
+# from agents.ben_graham import ben_graham_agent
+# from agents.bill_ackman import bill_ackman_agent
+# from agents.fundamentals import fundamentals_agent
 from agents.portfolio_manager import portfolio_management_agent
-from agents.technicals import technical_analyst_agent
+# from agents.technicals import technical_analyst_agent
 from agents.risk_manager import risk_management_agent
-from agents.sentiment import sentiment_agent
-from agents.warren_buffett import warren_buffett_agent
+# from agents.sentiment import sentiment_agent
+# from agents.warren_buffett import warren_buffett_agent
 from graph.state import AgentState
-from agents.valuation import valuation_agent
+# from agents.valuation import valuation_agent
 from utils.display import print_trading_output
 from utils.analysts import ANALYST_ORDER, get_analyst_nodes
 from utils.progress import progress
@@ -23,7 +23,7 @@ from llm.models import LLM_ORDER, get_model_info
 import argparse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from tabulate import tabulate
+# from tabulate import tabulate
 from utils.visualize import save_graph_as_png
 import json
 
@@ -55,8 +55,8 @@ def run_hedge_fund(
     start_date: str,
     end_date: str,
     portfolio: dict,
-    show_reasoning: bool = False,
-    selected_analysts: list[str] = [],
+    show_reasoning: bool = True,
+    selected_analysts: list[str] = None,
     model_name: str = "gpt-4o",
     model_provider: str = "OpenAI",
 ):
@@ -154,7 +154,7 @@ if __name__ == "__main__":
         default=0.0,
         help="Initial margin requirement. Defaults to 0.0"
     )
-    parser.add_argument("--tickers", type=str, required=True, help="Comma-separated list of stock ticker symbols")
+    parser.add_argument("--tickers", type=str, default= "MSFT,NVDA,AAPL,GOOGL,TSLA", help="Comma-separated list of stock ticker symbols")
     parser.add_argument(
         "--start-date",
         type=str,
@@ -237,13 +237,13 @@ if __name__ == "__main__":
         try:
             datetime.strptime(args.start_date, "%Y-%m-%d")
         except ValueError:
-            raise ValueError("Start date must be in YYYY-MM-DD format")
+            raise ValueError("Start date must be in YYYY-MM-DD format") from None
 
     if args.end_date:
         try:
             datetime.strptime(args.end_date, "%Y-%m-%d")
         except ValueError:
-            raise ValueError("End date must be in YYYY-MM-DD format")
+            raise ValueError("End date must be in YYYY-MM-DD format") from None
 
     # Set the start and end dates
     end_date = args.end_date or datetime.now().strftime("%Y-%m-%d")
