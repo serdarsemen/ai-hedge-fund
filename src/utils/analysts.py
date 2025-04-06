@@ -12,6 +12,7 @@ from agents.stanley_druckenmiller import stanley_druckenmiller_agent
 from agents.technicals import technical_analyst_agent
 from agents.valuation import valuation_agent
 from agents.warren_buffett import warren_buffett_agent
+from agents.adaptive_quant import adaptive_quant_agent
 
 # Define analyst configuration - single source of truth
 ANALYST_CONFIG = {
@@ -74,6 +75,11 @@ ANALYST_CONFIG = {
         "display_name": "Valuation Analyst",
         "agent_func": valuation_agent,
         "order": 11,
+    },
+    "adaptive_quant": {
+        "display_name": "Adaptive Quant",
+        "agent_func": adaptive_quant_agent,
+        "order": 13,  # Adjust as needed
     },
 }
 

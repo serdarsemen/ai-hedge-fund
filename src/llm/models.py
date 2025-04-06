@@ -3,7 +3,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_deepseek import ChatDeepSeek
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from enum import Enum
 from pydantic import BaseModel
 from typing import Tuple
@@ -12,6 +12,7 @@ from typing import Tuple
 class ModelProvider(str, Enum):
     """Enum for supported LLM providers"""
     ANTHROPIC = "Anthropic"
+    AZURE = "Azure"  # Add Azure provider
     DEEPSEEK = "DeepSeek"
     GEMINI = "Gemini"
     GROQ = "Groq"
@@ -28,15 +29,15 @@ class LLMModel(BaseModel):
     def to_choice_tuple(self) -> Tuple[str, str, str]:
         """Convert to format needed for questionary choices"""
         return (self.display_name, self.model_name, self.provider.value)
-    
+
     def has_json_mode(self) -> bool:
         """Check if the model supports JSON mode"""
         return not self.is_deepseek() and not self.is_gemini()
-    
+
     def is_deepseek(self) -> bool:
         """Check if the model is a DeepSeek model"""
         return self.model_name.startswith("deepseek")
-    
+
     def is_gemini(self) -> bool:
         """Check if the model is a Gemini model"""
         return self.model_name.startswith("gemini")
@@ -44,6 +45,13 @@ class LLMModel(BaseModel):
 
 # Define available models
 AVAILABLE_MODELS = [
+    # Add Azure OpenAI models
+    LLMModel(
+        display_name="[azure] gpt-4o-2",
+        model_name="gpt-4o-2",
+        provider=ModelProvider.AZURE
+    ),
+    # Existing models
     LLMModel(
         display_name="[anthropic] claude-3.5-haiku",
         model_name="claude-3-5-haiku-latest",
@@ -119,7 +127,23 @@ def get_model_info(model_name: str) -> LLMModel | None:
     return next((model for model in AVAILABLE_MODELS if model.model_name == model_name), None)
 
 def get_model(model_name: str, model_provider: ModelProvider) -> ChatOpenAI | ChatGroq | None:
-    if model_provider == ModelProvider.GROQ:
+    if model_provider == ModelProvider.AZURE:
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+        deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME")
+
+        if not all([api_key, endpoint, api_version, deployment_name]):
+            print("API Configuration Error: Please make sure all Azure OpenAI environment variables are set.")
+            raise ValueError("Azure OpenAI configuration incomplete. Check AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_VERSION, and AZURE_OPENAI_DEPLOYMENT_NAME in your .env file.")
+
+        return AzureChatOpenAI(
+            azure_deployment=deployment_name,
+            openai_api_version=api_version,
+            azure_endpoint=endpoint,
+            api_key=api_key,
+        )
+    elif model_provider == ModelProvider.GROQ:
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             # Print error to console
