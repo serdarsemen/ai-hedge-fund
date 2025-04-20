@@ -14,6 +14,7 @@ from utils.display import print_trading_output
 from utils.analysts import ANALYST_ORDER, get_analyst_nodes
 from utils.progress import progress
 from llm.models import LLM_ORDER, get_model_info
+
 import argparse
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -144,13 +145,32 @@ def create_workflow(selected_analysts: Optional[tuple] = None) -> StateGraph:
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments efficiently."""
     parser = argparse.ArgumentParser(description="Run the hedge fund trading system")
-    parser.add_argument("--initial-cash", type=float, default=100000.0)
-    parser.add_argument("--margin-requirement", type=float, default=0.0)
-    parser.add_argument("--tickers", type=str, default="MSFT,NVDA,AAPL,GOOGL,TSLA")
-    parser.add_argument("--start-date", type=str)
-    parser.add_argument("--end-date", type=str)
-    parser.add_argument("--show-reasoning", action="store_true")
-    parser.add_argument("--show-agent-graph", action="store_true")
+    parser.add_argument(
+        "--initial-cash",
+        type=float,
+        default=100000.0,
+        help="Initial cash position. Defaults to 100000.0)"
+    )
+    parser.add_argument(
+        "--margin-requirement",
+        type=float,
+        default=0.0,
+        help="Initial margin requirement. Defaults to 0.0"
+    )
+    parser.add_argument("--tickers", type=str, required=True, help="Comma-separated list of stock ticker symbols")
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        help="Start date (YYYY-MM-DD). Defaults to 3 months before end date",
+    )
+    parser.add_argument("--end-date", type=str, help="End date (YYYY-MM-DD). Defaults to today")
+    parser.add_argument("--show-reasoning", action="store_true", help="Show reasoning from each agent")
+    parser.add_argument(
+        "--show-agent-graph", action="store_true", help="Show the agent graph"
+    )
+    parser.add_argument(
+        "--ollama", action="store_true", help="Use Ollama for local LLM inference"
+    )
 
     return parser.parse_args()
 
@@ -179,27 +199,88 @@ def main():
     selected_analysts = choices
     print(f"\nSelected analysts: {', '.join(Fore.GREEN + choice.title().replace('_', ' ') + Style.RESET_ALL for choice in choices)}\n")
 
-    # Select LLM model
-    model_choice = questionary.select(
-        "Select your LLM model:",
-        choices=[questionary.Choice(display, value=value) for display, value, _ in LLM_ORDER],
-        style=questionary.Style([
-            ("selected", "fg:green bold"),
-            ("pointer", "fg:green bold"),
-            ("highlighted", "fg:green"),
-            ("answer", "fg:green bold"),
-        ])
-    ).ask()
+    # Select LLM model based on whether Ollama is being used
+    model_choice = None
+    model_provider = None
+    
+    if args.ollama:
+        print(f"{Fore.CYAN}Using Ollama for local LLM inference.{Style.RESET_ALL}")
+        
+        # Select from Ollama-specific models
+        model_choice = questionary.select(
+            "Select your Ollama model:",
+            choices=[questionary.Choice(display, value=value) for display, value, _ in OLLAMA_LLM_ORDER],
+            style=questionary.Style([
+                ("selected", "fg:green bold"),
+                ("pointer", "fg:green bold"),
+                ("highlighted", "fg:green"),
+                ("answer", "fg:green bold"),
+            ])
+        ).ask()
+        
+        if not model_choice:
+            print("\n\nInterrupt received. Exiting...")
+            sys.exit(0)
+        
+        # Ensure Ollama is installed, running, and the model is available
+        if not ensure_ollama_and_model(model_choice):
+            print(f"{Fore.RED}Cannot proceed without Ollama and the selected model.{Style.RESET_ALL}")
+            sys.exit(1)
+        
+        model_provider = ModelProvider.OLLAMA.value
+        print(f"\nSelected {Fore.CYAN}Ollama{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+    else:
+        # Use the standard cloud-based LLM selection
+        model_choice = questionary.select(
+            "Select your LLM model:",
+            choices=[questionary.Choice(display, value=value) for display, value, _ in LLM_ORDER],
+            style=questionary.Style([
+                ("selected", "fg:green bold"),
+                ("pointer", "fg:green bold"),
+                ("highlighted", "fg:green"),
+                ("answer", "fg:green bold"),
+            ])
+        ).ask()
 
-    if not model_choice:
-        print("\n\nInterrupt received. Exiting...")
-        sys.exit(0)
+        if not model_choice:
+            print("\n\nInterrupt received. Exiting...")
+            sys.exit(0)
+        else:
+            # Get model info using the helper function
+            model_info = get_model_info(model_choice)
+            if model_info:
+                model_provider = model_info.provider.value
+                print(f"\nSelected {Fore.CYAN}{model_provider}{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+            else:
+                model_provider = "Unknown"
+                print(f"\nSelected model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
 
-    model_info = get_model_info(model_choice)
-    model_provider = model_info.provider.value if model_info else "Unknown"
-    print(f"\nSelected {Fore.CYAN}{model_provider}{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+    # Create the workflow with selected analysts
+    workflow = create_workflow(selected_analysts)
+    app = workflow.compile()
 
-    # Handle dates
+    if args.show_agent_graph:
+        file_path = ""
+        if selected_analysts is not None:
+            for selected_analyst in selected_analysts:
+                file_path += selected_analyst + "_"
+            file_path += "graph.png"
+        save_graph_as_png(app, file_path)
+
+    # Validate dates if provided
+    if args.start_date:
+        try:
+            datetime.strptime(args.start_date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("Start date must be in YYYY-MM-DD format")
+
+    if args.end_date:
+        try:
+            datetime.strptime(args.end_date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("End date must be in YYYY-MM-DD format")
+
+    # Set the start and end dates
     end_date = args.end_date or datetime.now().strftime("%Y-%m-%d")
     if not args.start_date:
         end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
