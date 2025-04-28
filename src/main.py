@@ -37,29 +37,9 @@ def parse_hedge_fund_response(response: str) -> Optional[Dict]:
         print(f"Error parsing response: {e}\nResponse: {repr(response)}")
         return None
 
-def initialize_portfolio(tickers: List[str], initial_cash: float, margin_requirement: float) -> Dict:
-    """Initialize portfolio structure efficiently."""
-    position_template = {
-        "long": 0,
-        "short": 0,
-        "long_cost_basis": 0.0,
-        "short_cost_basis": 0.0,
-        "short_margin_used": 0.0,
-    }
 
-    realized_template = {
-        "long": 0.0,
-        "short": 0.0,
-    }
 
-    return {
-        "cash": initial_cash,
-        "margin_requirement": margin_requirement,
-        "margin_used": 0.0,
-        "positions": {ticker: position_template.copy() for ticker in tickers},
-        "realized_gains": {ticker: realized_template.copy() for ticker in tickers}
-    }
-
+##### Run the Hedge Fund #####
 def run_hedge_fund(
     tickers: List[str],
     start_date: str,
@@ -145,18 +125,8 @@ def create_workflow(selected_analysts: Optional[tuple] = None) -> StateGraph:
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments efficiently."""
     parser = argparse.ArgumentParser(description="Run the hedge fund trading system")
-    parser.add_argument(
-        "--initial-cash",
-        type=float,
-        default=100000.0,
-        help="Initial cash position. Defaults to 100000.0)"
-    )
-    parser.add_argument(
-        "--margin-requirement",
-        type=float,
-        default=0.0,
-        help="Initial margin requirement. Defaults to 0.0"
-    )
+    parser.add_argument("--initial-cash", type=float, default=100000.0, help="Initial cash position. Defaults to 100000.0)")
+    parser.add_argument("--margin-requirement", type=float, default=0.0, help="Initial margin requirement. Defaults to 0.0")
     parser.add_argument("--tickers", type=str, required=True, help="Comma-separated list of stock ticker symbols")
     parser.add_argument(
         "--start-date",
@@ -165,12 +135,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--end-date", type=str, help="End date (YYYY-MM-DD). Defaults to today")
     parser.add_argument("--show-reasoning", action="store_true", help="Show reasoning from each agent")
-    parser.add_argument(
-        "--show-agent-graph", action="store_true", help="Show the agent graph"
-    )
-    parser.add_argument(
-        "--ollama", action="store_true", help="Use Ollama for local LLM inference"
-    )
+    parser.add_argument("--show-agent-graph", action="store_true", help="Show the agent graph")
+    parser.add_argument("--ollama", action="store_true", help="Use Ollama for local LLM inference")
 
     return parser.parse_args()
 
@@ -202,31 +168,33 @@ def main():
     # Select LLM model based on whether Ollama is being used
     model_choice = None
     model_provider = None
-    
+
     if args.ollama:
         print(f"{Fore.CYAN}Using Ollama for local LLM inference.{Style.RESET_ALL}")
-        
+
         # Select from Ollama-specific models
         model_choice = questionary.select(
             "Select your Ollama model:",
             choices=[questionary.Choice(display, value=value) for display, value, _ in OLLAMA_LLM_ORDER],
-            style=questionary.Style([
-                ("selected", "fg:green bold"),
-                ("pointer", "fg:green bold"),
-                ("highlighted", "fg:green"),
-                ("answer", "fg:green bold"),
-            ])
+            style=questionary.Style(
+                [
+                    ("selected", "fg:green bold"),
+                    ("pointer", "fg:green bold"),
+                    ("highlighted", "fg:green"),
+                    ("answer", "fg:green bold"),
+                ]
+            ),
         ).ask()
-        
+
         if not model_choice:
             print("\n\nInterrupt received. Exiting...")
             sys.exit(0)
-        
+
         # Ensure Ollama is installed, running, and the model is available
         if not ensure_ollama_and_model(model_choice):
             print(f"{Fore.RED}Cannot proceed without Ollama and the selected model.{Style.RESET_ALL}")
             sys.exit(1)
-        
+
         model_provider = ModelProvider.OLLAMA.value
         print(f"\nSelected {Fore.CYAN}Ollama{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
     else:
@@ -234,12 +202,14 @@ def main():
         model_choice = questionary.select(
             "Select your LLM model:",
             choices=[questionary.Choice(display, value=value) for display, value, _ in LLM_ORDER],
-            style=questionary.Style([
-                ("selected", "fg:green bold"),
-                ("pointer", "fg:green bold"),
-                ("highlighted", "fg:green"),
-                ("answer", "fg:green bold"),
-            ])
+            style=questionary.Style(
+                [
+                    ("selected", "fg:green bold"),
+                    ("pointer", "fg:green bold"),
+                    ("highlighted", "fg:green"),
+                    ("answer", "fg:green bold"),
+                ]
+            ),
         ).ask()
 
         if not model_choice:
@@ -290,6 +260,29 @@ def main():
 
     # Initialize portfolio
     portfolio = initialize_portfolio(tickers, args.initial_cash, args.margin_requirement)
+    # Initialize portfolio with cash amount and stock positions
+    portfolio = {
+        "cash": args.initial_cash,  # Initial cash amount
+        "margin_requirement": args.margin_requirement,  # Initial margin requirement
+        "margin_used": 0.0,  # total margin usage across all short positions
+        "positions": {
+            ticker: {
+                "long": 0,  # Number of shares held long
+                "short": 0,  # Number of shares held short
+                "long_cost_basis": 0.0,  # Average cost basis for long positions
+                "short_cost_basis": 0.0,  # Average price at which shares were sold short
+                "short_margin_used": 0.0,  # Dollars of margin used for this ticker's short
+            }
+            for ticker in tickers
+        },
+        "realized_gains": {
+            ticker: {
+                "long": 0.0,  # Realized gains from long positions
+                "short": 0.0,  # Realized gains from short positions
+            }
+            for ticker in tickers
+        },
+    }
 
     # Show agent graph if requested
     if args.show_agent_graph:
