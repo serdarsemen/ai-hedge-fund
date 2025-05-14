@@ -1,5 +1,5 @@
-from graph.state import AgentState, show_agent_reasoning
-from tools.api import (
+from src.graph.state import AgentState, show_agent_reasoning
+from src.tools.api import (
     get_financial_metrics,
     get_market_cap,
     search_line_items,
@@ -12,8 +12,8 @@ from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 import json
 from typing_extensions import Literal
-from utils.progress import progress
-from utils.llm import call_llm
+from src.utils.progress import progress
+from src.utils.llm import call_llm
 import statistics
 
 
@@ -156,6 +156,9 @@ def stanley_druckenmiller_agent(state: AgentState):
         show_agent_reasoning(druck_analysis, "Stanley Druckenmiller Agent")
 
     state["data"]["analyst_signals"]["stanley_druckenmiller_agent"] = druck_analysis
+
+    progress.update_status("stanley_druckenmiller_agent", None, "Done")
+    
     return {"messages": [message], "data": state["data"]}
 
 

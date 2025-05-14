@@ -1,3 +1,4 @@
+import asyncio
 import json
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, StateGraph
@@ -9,18 +10,17 @@ from src.utils.analysts import ANALYST_CONFIG
 from src.graph.state import AgentState
 
 
-
 # Helper function to create the agent graph
 def create_graph(selected_agents: list[str]) -> StateGraph:
     """Create the workflow with selected agents."""
     graph = StateGraph(AgentState)
     graph.add_node("start_node", start)
 
+    # Filter out any agents that are not in analyst.py
+    selected_agents = [agent for agent in selected_agents if agent in ANALYST_CONFIG]
+
     # Get analyst nodes from the configuration
-    analyst_nodes = {
-        key: (f"{key}_agent", config["agent_func"])
-        for key, config in ANALYST_CONFIG.items()
-    }
+    analyst_nodes = {key: (f"{key}_agent", config["agent_func"]) for key, config in ANALYST_CONFIG.items()}
 
     # Add selected analyst nodes
     for agent_name in selected_agents:
@@ -30,7 +30,7 @@ def create_graph(selected_agents: list[str]) -> StateGraph:
 
     # Always add risk and portfolio management (for now)
     graph.add_node("risk_management_agent", risk_management_agent)
-    graph.add_node("portfolio_management_agent", portfolio_management_agent)
+    graph.add_node("portfolio_manager", portfolio_management_agent)
 
     # Connect selected agents to risk management
     for agent_name in selected_agents:
@@ -38,14 +38,23 @@ def create_graph(selected_agents: list[str]) -> StateGraph:
         graph.add_edge(node_name, "risk_management_agent")
 
     # Connect the risk management agent to the portfolio management agent
-    graph.add_edge("risk_management_agent", "portfolio_management_agent")
+    graph.add_edge("risk_management_agent", "portfolio_manager")
 
     # Connect the portfolio management agent to the end node
-    graph.add_edge("portfolio_management_agent", END)
+    graph.add_edge("portfolio_manager", END)
 
     # Set the entry point to the start node
     graph.set_entry_point("start_node")
     return graph
+
+
+async def run_graph_async(graph, portfolio, tickers, start_date, end_date, model_name, model_provider):
+    """Async wrapper for run_graph to work with asyncio."""
+    # Use run_in_executor to run the synchronous function in a separate thread
+    # so it doesn't block the event loop
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(None, lambda: run_graph(graph, portfolio, tickers, start_date, end_date, model_name, model_provider))  # Use default executor
+    return result
 
 
 def run_graph(
