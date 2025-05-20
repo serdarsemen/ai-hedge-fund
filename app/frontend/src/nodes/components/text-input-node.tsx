@@ -1,11 +1,13 @@
+import { ModelSelector } from '@/components/ui/llm-selector';
 import { getConnectedEdges, useReactFlow, type NodeProps } from '@xyflow/react';
-import { Bot, Play } from 'lucide-react';
+import { Bot, Loader2, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { useNodeStatus } from '@/contexts/node-context';
+import { useNodeContext } from '@/contexts/node-context';
+import { apiModels, defaultModel, ModelItem } from '@/data/models';
 import { api } from '@/services/api';
 import { type TextInputNode } from '../types';
 import { NodeShell } from './node-shell';
@@ -17,11 +19,16 @@ export function TextInputNode({
   isConnectable,
 }: NodeProps<TextInputNode>) {
   const [tickers, setTickers] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const nodeStatusContext = useNodeStatus();
-  const { resetAllNodes, nodeStates, updateNodeStatus } = nodeStatusContext;
+  const [selectedModel, setSelectedModel] = useState<ModelItem | null>(defaultModel);
+  const nodeContext = useNodeContext();
+  const { resetAllNodes, agentNodeData } = nodeContext;
   const { getNodes, getEdges } = useReactFlow();
   const abortControllerRef = useRef<(() => void) | null>(null);
+  
+  // Check if any agent is in progress
+  const isProcessing = Object.values(agentNodeData).some(
+    agent => agent.status === 'IN_PROGRESS'
+  );
   
   // Clean up SSE connection on unmount
   useEffect(() => {
@@ -37,13 +44,8 @@ export function TextInputNode({
   };
 
   const handlePlay = () => {
-    setIsProcessing(true);
-    
     // First, reset all nodes to IDLE
     resetAllNodes();
-    
-    // Update this node to IN_PROGRESS
-    updateNodeStatus(id, 'IN_PROGRESS');
     
     // Clean up any existing connection
     if (abortControllerRef.current) {
@@ -71,31 +73,20 @@ export function TextInputNode({
     
     // Then filter for nodes that are agents
     nodes.forEach(node => {
-      if (node.type === 'agent' && connectedNodeIds.has(node.id)) {
+      if (node.type === 'agent-node' && connectedNodeIds.has(node.id)) {
         selectedAgents.add(node.id);
       }
     });
-    
-    console.log(`Connected agents: `, Array.from(selectedAgents));
-    
+        
     abortControllerRef.current = api.runHedgeFund(
       {
         tickers: tickerList,
         selected_agents: Array.from(selectedAgents),
-      },
-      (event) => {
-        // Basic status updates for start node only (agent-specific updates are handled by the API)
-        if (event.type === 'complete') {
-          setIsProcessing(false);
-          updateNodeStatus(id, 'COMPLETE');
-        } 
-        else if (event.type === 'error') {
-          setIsProcessing(false);
-          updateNodeStatus(id, 'ERROR');
-        }
+        model_name: selectedModel?.model_name || undefined,
+        model_provider: selectedModel?.provider as any || undefined,
       },
       // Pass the node status context to the API
-      nodeStatusContext
+      nodeContext
     );
   };
 
@@ -111,25 +102,43 @@ export function TextInputNode({
     >
       <CardContent className="p-0">
         <div className="border-t border-border p-3">
-          <div className="flex flex-col gap-2">
-            <div className="text-subtitle text-muted-foreground flex items-center gap-1">
-              Tickers
+          <div className="flex flex-col gap-4">
+            {/* Tickers Input */}
+            <div className="flex flex-col gap-2">
+              <div className="text-subtitle text-muted-foreground flex items-center gap-1">
+                Tickers
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter tickers"
+                  value={tickers}
+                  onChange={handleTickersChange}
+                />
+                <Button 
+                  size="icon" 
+                  variant="secondary"
+                  className="flex-shrink-0 transition-all duration-200 hover:bg-primary hover:text-primary-foreground active:scale-95"
+                  onClick={handlePlay}
+                  disabled={isProcessing || !tickers.trim()}
+                >
+                  {isProcessing ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Play className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter tickers"
-                value={tickers}
-                onChange={handleTickersChange}
+            <div className="flex flex-col gap-2">
+              <div className="text-subtitle text-muted-foreground flex items-center gap-1">
+                Model
+              </div>
+              <ModelSelector
+                models={apiModels}
+                value={selectedModel?.model_name || ""}
+                onChange={setSelectedModel}
+                placeholder="Select a model..."
               />
-              <Button 
-                size="icon" 
-                variant="secondary"
-                className="flex-shrink-0 transition-all duration-200 hover:bg-primary hover:text-primary-foreground active:scale-95"
-                onClick={handlePlay}
-                disabled={isProcessing || !tickers.trim()}
-              >
-                <Play className="h-3.5 w-3.5" />
-              </Button>
             </div>
           </div>
         </div>

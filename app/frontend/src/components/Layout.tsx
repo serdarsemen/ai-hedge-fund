@@ -14,7 +14,7 @@ type LayoutProps = {
 };
 
 export function Layout({ leftSidebar, rightSidebar, children }: LayoutProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>

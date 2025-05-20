@@ -3,7 +3,7 @@ import { Bot } from 'lucide-react';
 import { useState } from 'react';
 
 import { CardContent } from '@/components/ui/card';
-import { useNodeStatus } from '@/contexts/node-context';
+import { useNodeContext } from '@/contexts/node-context';
 import { cn } from '@/lib/utils';
 import { NodeMessage, type AgentNode } from '../types';
 import { getStatusColor } from '../utils';
@@ -16,8 +16,8 @@ export function AgentNode({
   id,
   isConnectable,
 }: NodeProps<AgentNode>) {
-  const { nodeStates } = useNodeStatus();
-  const nodeData = nodeStates[id] || { 
+  const { agentNodeData } = useNodeContext();
+  const nodeData = agentNodeData[id] || { 
     status: 'IDLE', 
     ticker: null, 
     message: '', 
@@ -61,7 +61,6 @@ export function AgentNode({
             )}
           </div>
         </div>
-
         <AgentOutputDialog
           isOpen={isDialogOpen}
           onOpenChange={setIsDialogOpen}

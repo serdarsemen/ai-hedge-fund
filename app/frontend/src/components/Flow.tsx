@@ -76,15 +76,11 @@ export function Flow({ className = '' }: FlowProps) {
         fitView
       >
         <Background gap={13}/>
-        <div 
-          className="absolute bottom-4 left-1/2 z-10"
-          style={{ 
-            width: 'auto',
-            transform: 'translateX(calc(-50% - 80px))'
-          }}
-        >
-          <Controls orientation='horizontal' />
-        </div>
+        <Controls 
+          position="bottom-center" 
+          orientation="horizontal" 
+          style={{ bottom: 20 }}
+        />
         <Panel position="top-right">
           <Button
             onClick={resetFlow}
