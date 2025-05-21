@@ -273,8 +273,6 @@ def main():
     else:
         start_date = args.start_date
 
-    # Initialize portfolio
-    portfolio = initialize_portfolio(tickers, args.initial_cash, args.margin_requirement)
     # Initialize portfolio with cash amount and stock positions
     portfolio = {
         "cash": args.initial_cash,  # Initial cash amount
