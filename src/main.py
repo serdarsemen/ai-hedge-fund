@@ -256,14 +256,14 @@ def main():
     if args.start_date:
         try:
             datetime.strptime(args.start_date, "%Y-%m-%d")
-        except ValueError:
-            raise ValueError("Start date must be in YYYY-MM-DD format")
+        except ValueError as e:
+            raise ValueError("Start date must be in YYYY-MM-DD format") from e
 
     if args.end_date:
         try:
             datetime.strptime(args.end_date, "%Y-%m-%d")
-        except ValueError:
-            raise ValueError("End date must be in YYYY-MM-DD format")
+        except ValueError as e:
+            raise ValueError("End date must be in YYYY-MM-DD format") from e
 
     # Set the start and end dates
     end_date = args.end_date or datetime.now().strftime("%Y-%m-%d")
