@@ -167,6 +167,9 @@ def main():
     selected_analysts = choices
     print(f"\nSelected analysts: {', '.join(Fore.GREEN + choice.title().replace('_', ' ') + Style.RESET_ALL for choice in choices)}\n")
 
+    # Convert selected_analysts to tuple for caching/workflow
+    selected_analysts_tuple = tuple(selected_analysts)
+
     # Select LLM model based on whether Ollama is being used
     model_name = ""
     model_provider = ""
@@ -241,7 +244,7 @@ def main():
             print(f"\nSelected model: {Fore.GREEN + Style.BRIGHT}{model_name}{Style.RESET_ALL}\n")
 
     # Create the workflow with selected analysts
-    workflow = create_workflow(selected_analysts)
+    workflow = create_workflow(selected_analysts_tuple)
     app = workflow.compile()
 
     if args.show_agent_graph:
@@ -301,7 +304,7 @@ def main():
     if args.show_agent_graph:
         file_path = "_".join(selected_analysts) + "_graph.png" if selected_analysts else "graph.png"
         with ThreadPoolExecutor() as executor:
-            executor.submit(save_graph_as_png, workflow_cache.get(tuple(sorted(selected_analysts))), file_path)
+            executor.submit(save_graph_as_png, workflow_cache.get(selected_analysts_tuple), file_path)
 
     # Run hedge fund and display results
     result = run_hedge_fund(
@@ -310,7 +313,7 @@ def main():
         end_date=end_date,
         portfolio=portfolio,
         show_reasoning=args.show_reasoning,
-        selected_analysts=selected_analysts,
+        selected_analysts=selected_analysts,  # keep as list for display
         model_name=model_name,
         model_provider=model_provider,
     )

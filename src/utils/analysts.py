@@ -14,6 +14,7 @@ from src.agents.stanley_druckenmiller import stanley_druckenmiller_agent
 from src.agents.technicals import technical_analyst_agent
 from src.agents.valuation import valuation_agent
 from src.agents.warren_buffett import warren_buffett_agent
+from src.agents.adaptive_quant import adaptive_quant_agent
 
 # Define analyst configuration - single source of truth
 ANALYST_CONFIG = {
