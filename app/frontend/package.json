@@ -16,6 +16,7 @@
     "@radix-ui/react-slot": "^1.2.0",
     "@radix-ui/react-tabs": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.6",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@xyflow/react": "^12.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -25,6 +26,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-resizable-panels": "^3.0.1",
+    "react-syntax-highlighter": "^15.6.1",
     "shadcn-ui": "^0.9.5",
     "tailwind-merge": "^3.2.0"
   },

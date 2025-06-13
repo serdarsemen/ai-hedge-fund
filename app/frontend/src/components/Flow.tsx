@@ -84,7 +84,7 @@ export function Flow({ className = '' }: FlowProps) {
         <Panel position="top-right">
           <Button
             onClick={resetFlow}
-            className="mr-2"
+            className="mr-2 z-30 bg-ramp-grey-800 text-white p-4 rounded-md hover:bg-ramp-grey-700"
           >
             Reset Flow
           </Button>

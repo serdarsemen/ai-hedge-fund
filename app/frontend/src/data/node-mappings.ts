@@ -8,25 +8,37 @@ export interface NodeTypeDefinition {
 
 // Define node creation functions for each type
 const nodeTypeDefinitions: Record<string, NodeTypeDefinition> = {
-  "Text Input": {
+  "Portfolio Manager": {
     createNode: (position: { x: number, y: number }): AppNode => ({
-      id: `text-input-node`,
-      type: "input-node",
+      id: `portfolio-manager-node`,
+      type: "portfolio-manager-node",
       position,
       data: {
-        name: "Input",
+        name: "Portfolio Manager",
         description: "Start Node",
         status: "Idle",
       },
     }),
   },
-  "Text Output": {
+  "JSON Output": {
     createNode: (position: { x: number, y: number }): AppNode => ({
-      id: `text-output-node`,
-      type: "output-node",
+      id: `json-output-node`,
+      type: "json-output-node",
       position,
       data: {
-        name: "Output",
+        name: "JSON Output",
+        description: "JSON Output Node",
+        status: "Idle",
+      },
+    }),
+  },
+  "Investment Report": {
+    createNode: (position: { x: number, y: number }): AppNode => ({
+      id: `investment-report-node`,
+      type: "investment-report-node",
+      position,
+      data: {
+        name: "Investment Report",
         description: "Output Node",
         status: "Idle",
       },
@@ -52,4 +64,21 @@ const nodeTypeDefinitions: Record<string, NodeTypeDefinition> = {
 
 export function getNodeTypeDefinition(componentName: string): NodeTypeDefinition | null {
   return nodeTypeDefinitions[componentName] || null;
+}
+
+// Get the node ID that would be generated for a component
+export function getNodeIdForComponent(componentName: string): string | null {
+  if (componentName === "Portfolio Manager") {
+    return "portfolio-manager-node";
+  }
+  if (componentName === "Investment Report") {
+    return "investment-report-node";
+  }
+  if (componentName === "JSON Output") {
+    return "json-output-node";
+  }
+  
+  // For agents, find by display name
+  const agent = agents.find(agent => agent.display_name === componentName);
+  return agent ? agent.key : null;
 } 

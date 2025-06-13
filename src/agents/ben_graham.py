@@ -69,13 +69,12 @@ def ben_graham_agent(state: AgentState):
         graham_output = generate_graham_output(
             ticker=ticker,
             analysis_data=analysis_data,
-            model_name=state["metadata"]["model_name"],
-            model_provider=state["metadata"]["model_provider"],
+            state=state,
         )
 
         graham_analysis[ticker] = {"signal": graham_output.signal, "confidence": graham_output.confidence, "reasoning": graham_output.reasoning}
 
-        progress.update_status("ben_graham_agent", ticker, "Done")
+        progress.update_status("ben_graham_agent", ticker, "Done", analysis=graham_output.reasoning)
 
     # Wrap results in a single message for the chain
     message = HumanMessage(content=json.dumps(graham_analysis), name="ben_graham_agent")
@@ -280,8 +279,7 @@ def analyze_valuation_graham(financial_line_items: list, market_cap: float) -> d
 def generate_graham_output(
     ticker: str,
     analysis_data: dict[str, any],
-    model_name: str,
-    model_provider: str,
+    state: AgentState,
 ) -> BenGrahamSignal:
     """
     Generates an investment decision in the style of Benjamin Graham:
@@ -339,9 +337,8 @@ def generate_graham_output(
 
     return call_llm(
         prompt=prompt,
-        model_name=model_name,
-        model_provider=model_provider,
         pydantic_model=BenGrahamSignal,
         agent_name="ben_graham_agent",
+        state=state,
         default_factory=create_default_ben_graham_signal,
     )

@@ -24,14 +24,14 @@ _cache = get_cache()
 
 def get_prices(ticker: str, start_date: str, end_date: str) -> list[Price]:
     """Fetch price data from cache or API."""
-    # Check cache first
-    if cached_data := _cache.get_prices(ticker):
-        # Filter cached data by date range and convert to Price objects
-        filtered_data = [Price(**price) for price in cached_data if start_date <= price["time"] <= end_date]
-        if filtered_data:
-            return filtered_data
+    # Create a cache key that includes all parameters to ensure exact matches
+    cache_key = f"{ticker}_{start_date}_{end_date}"
+    
+    # Check cache first - simple exact match
+    if cached_data := _cache.get_prices(cache_key):
+        return [Price(**price) for price in cached_data]
 
-    # If not in cache or no data in range, fetch from API
+    # If not in cache, fetch from API
     headers = {}
     if api_key := os.environ.get("FINANCIAL_DATASETS_API_KEY"):
         headers["X-API-KEY"] = api_key
@@ -48,8 +48,8 @@ def get_prices(ticker: str, start_date: str, end_date: str) -> list[Price]:
     if not prices:
         return []
 
-    # Cache the results as dicts
-    _cache.set_prices(ticker, [p.model_dump() for p in prices])
+    # Cache the results using the comprehensive cache key
+    _cache.set_prices(cache_key, [p.model_dump() for p in prices])
     return prices
 
 
@@ -60,15 +60,14 @@ def get_financial_metrics(
     limit: int = 10,
 ) -> list[FinancialMetrics]:
     """Fetch financial metrics from cache or API."""
-    # Check cache first
-    if cached_data := _cache.get_financial_metrics(ticker):
-        # Filter cached data by date and limit
-        filtered_data = [FinancialMetrics(**metric) for metric in cached_data if metric["report_period"] <= end_date]
-        filtered_data.sort(key=lambda x: x.report_period, reverse=True)
-        if filtered_data:
-            return filtered_data[:limit]
+    # Create a cache key that includes all parameters to ensure exact matches
+    cache_key = f"{ticker}_{period}_{end_date}_{limit}"
+    
+    # Check cache first - simple exact match
+    if cached_data := _cache.get_financial_metrics(cache_key):
+        return [FinancialMetrics(**metric) for metric in cached_data]
 
-    # If not in cache or insufficient data, fetch from API
+    # If not in cache, fetch from API
     headers = {}
     if api_key := os.environ.get("FINANCIAL_DATASETS_API_KEY"):
         headers["X-API-KEY"] = api_key
@@ -80,14 +79,13 @@ def get_financial_metrics(
 
     # Parse response with Pydantic model
     metrics_response = FinancialMetricsResponse(**response.json())
-    # Return the FinancialMetrics objects directly instead of converting to dict
     financial_metrics = metrics_response.financial_metrics
 
     if not financial_metrics:
         return []
 
-    # Cache the results as dicts
-    _cache.set_financial_metrics(ticker, [m.model_dump() for m in financial_metrics])
+    # Cache the results as dicts using the comprehensive cache key
+    _cache.set_financial_metrics(cache_key, [m.model_dump() for m in financial_metrics])
     return financial_metrics
 
 
@@ -133,15 +131,14 @@ def get_insider_trades(
     limit: int = 1000,
 ) -> list[InsiderTrade]:
     """Fetch insider trades from cache or API."""
-    # Check cache first
-    if cached_data := _cache.get_insider_trades(ticker):
-        # Filter cached data by date range
-        filtered_data = [InsiderTrade(**trade) for trade in cached_data if (start_date is None or (trade.get("transaction_date") or trade["filing_date"]) >= start_date) and (trade.get("transaction_date") or trade["filing_date"]) <= end_date]
-        filtered_data.sort(key=lambda x: x.transaction_date or x.filing_date, reverse=True)
-        if filtered_data:
-            return filtered_data
+    # Create a cache key that includes all parameters to ensure exact matches
+    cache_key = f"{ticker}_{start_date or 'none'}_{end_date}_{limit}"
+    
+    # Check cache first - simple exact match
+    if cached_data := _cache.get_insider_trades(cache_key):
+        return [InsiderTrade(**trade) for trade in cached_data]
 
-    # If not in cache or insufficient data, fetch from API
+    # If not in cache, fetch from API
     headers = {}
     if api_key := os.environ.get("FINANCIAL_DATASETS_API_KEY"):
         headers["X-API-KEY"] = api_key
@@ -182,8 +179,8 @@ def get_insider_trades(
     if not all_trades:
         return []
 
-    # Cache the results
-    _cache.set_insider_trades(ticker, [trade.model_dump() for trade in all_trades])
+    # Cache the results using the comprehensive cache key
+    _cache.set_insider_trades(cache_key, [trade.model_dump() for trade in all_trades])
     return all_trades
 
 
@@ -194,15 +191,14 @@ def get_company_news(
     limit: int = 1000,
 ) -> list[CompanyNews]:
     """Fetch company news from cache or API."""
-    # Check cache first
-    if cached_data := _cache.get_company_news(ticker):
-        # Filter cached data by date range
-        filtered_data = [CompanyNews(**news) for news in cached_data if (start_date is None or news["date"] >= start_date) and news["date"] <= end_date]
-        filtered_data.sort(key=lambda x: x.date, reverse=True)
-        if filtered_data:
-            return filtered_data
+    # Create a cache key that includes all parameters to ensure exact matches
+    cache_key = f"{ticker}_{start_date or 'none'}_{end_date}_{limit}"
+    
+    # Check cache first - simple exact match
+    if cached_data := _cache.get_company_news(cache_key):
+        return [CompanyNews(**news) for news in cached_data]
 
-    # If not in cache or insufficient data, fetch from API
+    # If not in cache, fetch from API
     headers = {}
     if api_key := os.environ.get("FINANCIAL_DATASETS_API_KEY"):
         headers["X-API-KEY"] = api_key
@@ -243,8 +239,8 @@ def get_company_news(
     if not all_news:
         return []
 
-    # Cache the results
-    _cache.set_company_news(ticker, [news.model_dump() for news in all_news])
+    # Cache the results using the comprehensive cache key
+    _cache.set_company_news(cache_key, [news.model_dump() for news in all_news])
     return all_news
 
 

@@ -1,26 +1,36 @@
 import { ModelSelector } from '@/components/ui/llm-selector';
 import { getConnectedEdges, useReactFlow, type NodeProps } from '@xyflow/react';
-import { Bot, Loader2, Play } from 'lucide-react';
+import { Brain, Loader2, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useNodeContext } from '@/contexts/node-context';
-import { apiModels, defaultModel, ModelItem } from '@/data/models';
+import { apiModels, defaultModel, mapProviderToEnum, ModelItem } from '@/data/models';
 import { api } from '@/services/api';
-import { type TextInputNode } from '../types';
+import { type PortfolioManagerNode } from '../types';
 import { NodeShell } from './node-shell';
 
-export function TextInputNode({
+export function PortfolioManagerNode({
   data,
   selected,
   id,
   isConnectable,
-}: NodeProps<TextInputNode>) {
+}: NodeProps<PortfolioManagerNode>) {
   const [tickers, setTickers] = useState('');
   const [selectedModel, setSelectedModel] = useState<ModelItem | null>(defaultModel);
+  
+  // Calculate default dates
+  const today = new Date();
+  const threeMonthsAgo = new Date(today);
+  threeMonthsAgo.setMonth(today.getMonth() - 3);
+  
+  const [startDate, setStartDate] = useState(threeMonthsAgo.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(today.toISOString().split('T')[0]);
+  
   const nodeContext = useNodeContext();
   const { resetAllNodes, agentNodeData } = nodeContext;
   const { getNodes, getEdges } = useReactFlow();
@@ -42,6 +52,14 @@ export function TextInputNode({
   
   const handleTickersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTickers(e.target.value);
+  };
+
+  const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setStartDate(e.target.value);
+  };
+
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEndDate(e.target.value);
   };
 
   const handlePlay = () => {
@@ -78,13 +96,31 @@ export function TextInputNode({
         selectedAgents.add(node.id);
       }
     });
+
+    // Collect agent models from connected agent nodes
+    const agentModels = [];
+    const allAgentModels = nodeContext.getAllAgentModels();
+    for (const agentId of selectedAgents) {
+      const model = allAgentModels[agentId];
+      if (model) {
+        agentModels.push({
+          agent_id: agentId,
+          model_name: model.model_name,
+          model_provider: mapProviderToEnum(model.provider)
+        });
+      }
+    }
         
     abortControllerRef.current = api.runHedgeFund(
       {
         tickers: tickerList,
         selected_agents: Array.from(selectedAgents),
+        agent_models: agentModels,
+        // Keep global model for backwards compatibility (will be removed later)
         model_name: selectedModel?.model_name || undefined,
         model_provider: selectedModel?.provider as any || undefined,
+        start_date: startDate,
+        end_date: endDate,
       },
       // Pass the node status context to the API
       nodeContext
@@ -97,8 +133,8 @@ export function TextInputNode({
         id={id}
         selected={selected}
         isConnectable={isConnectable}
-        icon={<Bot className="h-5 w-5" />}
-        name={data.name || "Custom Component"}
+        icon={<Brain className="h-5 w-5" />}
+        name={data.name || "Portfolio Manager"}
         description={data.description}
         hasLeftHandle={false}
       >
@@ -148,6 +184,37 @@ export function TextInputNode({
                   placeholder="Select a model..."
                 />
               </div>
+              <Accordion type="single" collapsible>
+                <AccordionItem value="advanced" className="border-none">
+                  <AccordionTrigger className="!text-subtitle text-muted-foreground">
+                    Advanced
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-2">
+                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                        <div className="text-subtitle text-muted-foreground flex items-center gap-1">
+                          End Date
+                        </div>
+                        <Input
+                          type="date"
+                          value={endDate}
+                          onChange={handleEndDateChange}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <div className="text-subtitle text-muted-foreground flex items-center gap-1">
+                          Start Date
+                        </div>
+                        <Input
+                          type="date"
+                          value={startDate}
+                          onChange={handleStartDateChange}
+                        />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
           </div>
         </CardContent>
